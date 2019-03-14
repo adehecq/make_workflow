@@ -14,7 +14,8 @@ We can summarize it as:
 -> hello3  
 There are two independant chains, no file is required to create hello1 and hello3, but hello1 is required for hello2.
 
-The Python implementation with make_workflow is simple:
+## Python implementation
+The Python implementation with make_workflow is simple and saved in the repo under *test.py*:
 
 ```python
 import make_workflow as mw
@@ -66,7 +67,32 @@ Finally, this can be used to run independant processes in parallel. here e.g., h
 wf.run(njobs=2)
 ```
 
-By default, the makefile is saved in a temporary file and deleted at the end. It can be printed with the command `wf.display()`, or it can be saved at a given location at creation: `wf = mw.Workflow('Makefile')`
+By default, the makefile is saved in a temporary file and deleted at the end. It can be printed with the command `wf.display()`, or it can be saved at a given location at creation: `wf = mw.Workflow('Makefile')`.
+
+## Bash implementation
+Similar, but less advanced tools exist for Bash. An example is shown in test.sh.
+
+```bash
+#!/usr/bin/bash
+
+source make_workflow.sh
+
+# Initialize workflow
+makefile_init Makefile "hello2 hello3" "Test flow"
+
+# Create some text file
+# The makefile_append function takes as arguments a string/list of the commands, inputs and outputs.
+makefile_append Makefile "Hello1" hello1 "" "echo foo > hello1"
+
+# Use first file to create 2nd file
+makefile_append Makefile "Hello2" hello2 hello1 "sed 's/foo/faa/' hello1 > hello2"
+
+# Create another file that does not require hello1 or 2
+makefile_append Makefile "Hello3" hello3 "" "echo bar > hello3"
+
+# Finaly run teh workflow
+make -f Makefile
+```
 
 ## Troubleshooting
 

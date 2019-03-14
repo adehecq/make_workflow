@@ -10,7 +10,7 @@ from tempfile import NamedTemporaryFile, mkstemp
 
 class Workflow():
 
-    def __init__(self, filename=None, title=None):
+    def __init__(self, filename=None, title=None, overwrite=False):
         """
         Used to initialize the makefile. Will generate a main function for the makefile. Optionally, will display a title string at beginning of execution.
         filename: str, path to the makefile (Default is None, i.e. generate a temporary file)
@@ -25,11 +25,19 @@ class Workflow():
             self.tmpf = tmpf   # Keep otherwise file will be deleted
             self.filename = tmpf.name
             
-        # Other open chosen file 
+        # Open chosen file 
         else:
-            f = open(filename, 'w+b')  # writing and reading
-            self.filename = filename
-            
+            # If file exists and overwrite+False, just open the file in append mode. Won't work for temporary files though as self.tmpf is deleted.
+            if os.path.exists(filename) & (overwrite==False):
+                f = open(filename, 'a+')  # append and writing
+                f.seek(0)
+                self.filename = filename
+                self.f = f
+                return
+            else:
+                f = open(filename, 'w+b')  # writing and reading
+                self.filename = filename
+
         # Write header
         f.write(".PHONY: MAIN\n\n")
 

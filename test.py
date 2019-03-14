@@ -4,10 +4,7 @@
 # Amaury Dehecq
 # 03/2019
 
-
 import make_workflow as mw
-import os, sys    
-
 
 # Initialize workflow
 wf = mw.Workflow(title="*** Test flow ***")

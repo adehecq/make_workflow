@@ -43,7 +43,7 @@ Let's save all this in test.py and see what happens:
 +sed s/foo/faa/ hello1 > hello2  
 +echo bar > hello3  
 
-Since no file exist yet, all commands are ran and the files created. If we run the command again... nothing happens as the file exist.
+Since no file exist yet, all commands are ran and the files created. If we run the command again... nothing happens as the files exist.
 
 Let's then remove some files to see what happens.  
 > rm hello3  
@@ -59,7 +59,7 @@ This time hello3 is missing, hence the last command is re-run **automatically**.
 +echo foo > hello1  
 +sed s/foo/faa/ hello1 > hello2  
 
-If hello1 is removed, the first two commands are re-run **automatically**. The same thing would happen if hello1 was updated, with e.g. > touch hello1.
+If hello1 is removed, the first two commands are re-run **automatically**. The same thing would happen if hello1 was updated, with e.g. `touch hello1`.
 
 Finally, this can be used to run independant processes in parallel. here e.g., hello2 and hello3 can be processed at the same time by replacing the last line with:  
 ```python

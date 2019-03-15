@@ -98,9 +98,10 @@ class Workflow():
                 filetext += line
 
         # Write to file
-        self.f.seek(0)
-        self.f.write(filetext)
-        self.f.flush()
+        f = open(self.filename,'w')
+        f.write(filetext)
+        f.flush()
+        self.f = open(self.filename,'a+')
 
         
     def display(self):

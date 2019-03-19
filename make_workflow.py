@@ -40,7 +40,7 @@ class Workflow():
 
         # Write header
         f.write(".PHONY: MAIN\n\n")
-
+                
         # Write MAIN line, without title
         if title is None:
             f.write("MAIN: \n\n")
@@ -49,6 +49,11 @@ class Workflow():
         else:
             f.write("MAIN: pre-build \n\n")
             f.write("pre-build:\n\t@printf '%s\\n'\n\n" %title)
+
+        # Add a function to list missing outputs, call with 'make list'
+        f.write("list:\n")
+        f.write("\t@printf '** Missing outputs **\\n'\n")
+        f.write("\t@$(MAKE) -n --debug -f $(lastword $(MAKEFILE_LIST)) | sed -n -e 's/^.*Must remake target //p' | sed -e '/MAIN/d' | sed -e '/pre-build/d'\n\n")
 
         # save
         f.flush()

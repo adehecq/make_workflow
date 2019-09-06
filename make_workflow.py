@@ -21,7 +21,7 @@ class Workflow():
         if filename==None:
             tmpf = NamedTemporaryFile()
             filename = tmpf.name
-            f = tmpf.file
+            f = open(filename, 'r+')  # Open externally, rather than using tmpf.file, otherwise open in binary mode
             self.tmpf = tmpf   # Keep otherwise file will be deleted
             self.filename = tmpf.name
             
@@ -35,12 +35,12 @@ class Workflow():
                 self.f = f
                 return
             else:
-                f = open(filename, 'w+b')  # writing and reading
+                f = open(filename, 'r+')  # writing and reading
                 self.filename = filename
 
         # Write header
         f.write(".PHONY: MAIN\n\n")
-                
+
         # Write MAIN line, without title
         if title is None:
             f.write("MAIN: \n\n")
@@ -59,7 +59,7 @@ class Workflow():
         f.flush()
         self.f = f
 
-        
+
     def append(self, cmds, inputs, outputs, title=None):
         """
         Add a new list of commands to the Makefile with given outputs and inputs and display a title string at beginning of excution.
@@ -168,13 +168,14 @@ def check_args_inout(args):
     Accepted arguments for input/outputs are string (in case a single input/output), or some kind of list (list, tuple, numpy array). Convert the latter into a string with a space delimiter for the makefile.
     Remove redundant slashes in filenames as it will be recognized as a different file by make.
     """
-
-    if hasattr(args,'__iter__'):  # should work for list, tuples, numpy arrays
-        args = [ os.path.normpath(arg) for arg in args ]
-        args = ' '.join(args)
-    elif isinstance(args,str):
+    # To comply with both Python3 and 2, string must be detected first
+    # in Python3, string have __iter__ attribute too
+    if isinstance(args,str):
         if len(args)>0:   # exclude empty string
             args = os.path.normpath(args)
+    elif hasattr(args,'__iter__'):  # should work for list, tuples, numpy arrays
+        args = [ os.path.normpath(arg) for arg in args ]
+        args = ' '.join(args)
     else:
         print("ERROR: argument must be iterable (list, tuple, array) or string")
         print(args)
@@ -186,12 +187,13 @@ def check_args_inout(args):
 def check_args_cmd(args):
     """
     Accepted commands for all functions are string (in case a single command), or some kind of list (list, tuple, numpy array). Convert both cases to list.
-    """
-    
-    if hasattr(args,'__iter__'):  # if arg is iterable
-        pass
-    elif isinstance(args,str):
+    """    
+    # To comply with both Python3 and 2, string must be detected first
+    # in Python3, string have __iter__ attribute too
+    if isinstance(args,str):
             args = [args,]
+    elif hasattr(args,'__iter__'):  # if arg is iterable
+        pass
     else:
         print("ERROR: argument must be iterable (list, tuple, array) or string")
         print(args)

@@ -7,6 +7,7 @@
 
 import os, sys
 from tempfile import NamedTemporaryFile, mkstemp
+from subprocess import check_call
 
 class Workflow():
 
@@ -19,9 +20,9 @@ class Workflow():
 
         # Create and open temporary file
         if filename==None:
-            tmpf = NamedTemporaryFile()
+            tmpf = NamedTemporaryFile(mode='w+')
             filename = tmpf.name
-            f = open(filename, 'r+')  # Open externally, rather than using tmpf.file, otherwise open in binary mode
+            f = tmpf.file
             self.tmpf = tmpf   # Keep otherwise file will be deleted
             self.filename = tmpf.name
             
@@ -35,7 +36,7 @@ class Workflow():
                 self.f = f
                 return
             else:
-                f = open(filename, 'r+')  # writing and reading
+                f = open(filename, 'w+')  # writing and reading
                 self.filename = filename
 
         # Write header
@@ -159,7 +160,7 @@ class Workflow():
             cmd += ' ' + other_args 
 
         # Run make
-        os.system(cmd)
+        check_call(cmd.split())
 
         
 

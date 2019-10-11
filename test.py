@@ -52,3 +52,27 @@ wf3.append("echo bar > bar3", "", "bar3", title='\n** Bar3 **')
 # Finaly, create and run workflow
 wf3.run(njobs=1)
 
+
+## Test flow 4 - test secondary files and clean ##
+
+# Initialize workflow
+wf = mw.Workflow(title="*** Test flow 4 - Secondary and clean ***", overwrite=True)
+
+# Create some text file
+wf.append("echo foo > bye1", "", "bye1", title='\n** bye1 **')
+
+# Create a first intermediate file
+wf.append("sed 's/foo/faa/' bye1 > bye2", "bye1", "bye2", title='\n** bye2 **', secondary=True)
+
+# Create a second intermediate file
+wf.append("sed 's/faa/fii/' bye2 > bye3", "bye2", "bye3", title='\n** bye3 **', secondary=True)
+
+# Create final file
+wf.append("cp bye3 bye4", "bye3", "bye4", title='\n** bye4 **')
+
+# Add a clean command
+wf.clean(['rm -f bye2', 'rm -f bye3'])
+
+# Create and run workflow - second call runs the clean commands
+wf.run(njobs=1)
+wf.run(njobs=1, clean=True)

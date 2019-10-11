@@ -7,7 +7,7 @@
 
 import os, sys
 from tempfile import NamedTemporaryFile, mkstemp
-from subprocess import check_call
+from subprocess import call
 
 class Workflow():
 
@@ -61,10 +61,11 @@ class Workflow():
         self.f = f
 
 
-    def append(self, cmds, inputs, outputs, title=None):
+    def append(self, cmds, inputs, outputs, title=None, secondary=False):
         """
         Add a new list of commands to the Makefile with given outputs and inputs and display a title string at beginning of excution.
         Commands can be a single command or a list of commands.
+        If secondary set to True, will consider all outputs of that command as secondary and the command won't be re-run if the files are deleted.
         """
         
         # Convert potential lists into string with space separator
@@ -92,23 +93,48 @@ class Workflow():
             self.f.write("\t@%s\n" %cmd)                       
 
         ## Need to update the MAIN function to add new outputs ##
+        # Only if outputs are not secondary (intermediate) files
+        if secondary==False:
+            # Read the text and replace MAIN
+            filetext = ''
+            self.f.seek(0)
+            for line in self.f:
+                if line[:4]=='MAIN':
+                    line = ' '.join([line.rstrip(),outputs,'\n'])
+                    filetext += line
+                else:
+                    filetext += line
 
-        # Read the text and replace MAIN
-        filetext = ''
-        self.f.seek(0)
-        for line in self.f:
-            if line[:4]=='MAIN':
-                line = ' '.join([line.rstrip(),outputs,'\n'])
-                filetext += line
-            else:
-                filetext += line
+            # Write to file
+            f = open(self.filename,'w')
+            f.write(filetext)
+            f.flush()
+            self.f = open(self.filename,'a+')
 
-        # Write to file
-        f = open(self.filename,'w')
-        f.write(filetext)
-        f.flush()
-        self.f = open(self.filename,'a+')
+        # if files are secondary, need to specify
+        else:
+            self.f.write("\n.SECONDARY : %s\n" %(outputs))
+            self.f.flush()
 
+    def clean(self, cmds):
+        """
+        Add a clean target to the Makefile to perform any additional cleaning commands as part of the workflow.
+        Commands can be a single command or a list of commands.
+        """
+        
+        # Write clean line
+        self.f.write("\nclean : \n")
+
+        # Add all commands
+        cmds = check_args_cmd(cmds)
+
+        for cmd in cmds:
+            # print command with + symbol and green color
+            self.f.write("\t-@echo '[32m+%s[0m'\n" %cmd)
+
+            # command to be run
+            self.f.write("\t@%s\n" %cmd)                       
+            self.f.flush()
         
     def display(self):
         """
@@ -120,21 +146,15 @@ class Workflow():
         #os.system('cat %s' %self.filename)
         
 
-    def append_secondary(self, second):
-        """
-        Add files to be considered as secondary, i.e., the files will not be recreated if deleted.
-        """
-        self.f.write(".SECONDARY : %s\n" %second)
-        self.f.flush()
 
-
-    def run(self, njobs=1, dryrun=False, debug=False, force=False, other_args=None):
+    def run(self, njobs=1, dryrun=False, debug=False, force=False, clean=False, other_args=None):
         """
         Run the makefile with njobs parallel jobs.
         njobs: int, number of parallel jobs to run.
         dryrun: bool, set to True to print the commands without running them.
         debug: bool, set to True to run in debug mode.
         force: bool, set to True to ignore errors and keep the worflow running.
+        clean: bool, set to True to run the clean command as well
         other_args: str, any other argument to pass to make
         """
         cmd = "make -f %s" %self.filename
@@ -154,13 +174,15 @@ class Workflow():
             cmd += ' -d'
         if force!=False:
             cmd += ' -i'
-
+        if clean:
+            cmd += ' clean'
+            
         # Allow any other arguments to be passed
         if other_args is not None:
             cmd += ' ' + other_args 
 
         # Run make
-        check_call(cmd.split())
+        call(cmd.split())
 
         
 

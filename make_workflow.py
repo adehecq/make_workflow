@@ -60,20 +60,24 @@ class Workflow():
         f.flush()
         self.f = f
 
-
-    def append(self, cmds, inputs, outputs, title=None, secondary=False):
+    def append(self, cmds, inputs, outputs, title=None, secondary=False, soft_inputs=[], verbose=True):
         """
         Add a new list of commands to the Makefile with given outputs and inputs and display a title string at beginning of excution.
         Commands can be a single command or a list of commands.
         If secondary set to True, will consider all outputs of that command as secondary and the command won't be re-run if the files are deleted.
+        If verbose set to False, will print stdout to /dev/null.
         """
         
         # Convert potential lists into string with space separator
         outputs = check_args_inout(outputs)
         inputs = check_args_inout(inputs)
+        soft_inputs = check_args_inout(soft_inputs)
 
         # Write target:deps line
-        self.f.write("\n%s : %s\n" %(outputs, inputs))
+        if len(soft_inputs)>0:
+            self.f.write("\n%s : %s | %s\n" % (outputs, inputs, soft_inputs))
+        else:
+            self.f.write("\n%s : %s\n" % (outputs, inputs))
 
         # Add command for title
         if title is not None:
@@ -85,6 +89,10 @@ class Workflow():
         for cmd in cmds:
             # Escape special characters
             #cmd = escape_char(cmd)
+
+            # Add stdout option
+            if not verbose:
+                cmd += ' 1> /dev/null'
 
             # print command with + symbol and green color
             self.f.write("\t-@echo '[32m+%s[0m'\n" %cmd)

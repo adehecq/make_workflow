@@ -154,14 +154,14 @@ class Workflow():
         #os.system('cat %s' %self.filename)
         
 
-
-    def run(self, njobs=1, dryrun=False, debug=False, force=False, clean=False, other_args=None):
+    def run(self, njobs=1, dryrun=False, debug=False, ignore_err=True, force=False, clean=False, other_args=None):
         """
         Run the makefile with njobs parallel jobs.
         njobs: int, number of parallel jobs to run.
         dryrun: bool, set to True to print the commands without running them.
         debug: bool, set to True to run in debug mode.
-        force: bool, set to True to ignore errors and keep the worflow running.
+        ignore_err: bool, set to True to continue the workflow even if errors are detected (recommended if several independent steps are running)
+        force: bool, set to True to re-run all the commands
         clean: bool, set to True to run the clean command as well
         other_args: str, any other argument to pass to make
         """
@@ -180,8 +180,10 @@ class Workflow():
             cmd += ' -n'
         if debug!=False:
             cmd += ' -d'
-        if force!=False:
+        if ignore_err:
             cmd += ' -i'
+        if force:
+            cmd += ' -B'
         if clean:
             cmd += ' clean'
             

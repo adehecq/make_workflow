@@ -10,7 +10,6 @@ import os
 import sys
 from tempfile import NamedTemporaryFile
 import traceback
-from subprocess import check_call
 import subprocess
 from packaging import version
 
@@ -274,7 +273,7 @@ class Workflow():
             cmd += ' ' + other_args
 
         # Run make
-        check_call(cmd.split())
+        subprocess.run(cmd, shell=True)
 
 
 def check_args_inout(args):

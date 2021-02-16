@@ -83,6 +83,10 @@ class Workflow():
         # Write header
         f.write(".PHONY: MAIN\n\n")
 
+        # Write colors for commands highlighting
+        f.write("CMDCOL := [32m\n")
+        f.write("DEFCOL := [0m\n\n")
+
         # Write MAIN line, without title
         if title is None:
             f.write("MAIN: \n\n")
@@ -90,7 +94,7 @@ class Workflow():
         # with title
         else:
             f.write("MAIN: pre-build \n\n")
-            f.write("pre-build:\n\t@printf '%s\\n'\n\n" % title)
+            f.write("pre-build:\n\t@+printf '%s\\n'\n\n" % title)
 
         # Add a function to list missing outputs, call with 'make list'
         f.write("list:\n")
@@ -145,7 +149,7 @@ class Workflow():
 
         # Add command for title
         if title is not None:
-            self.f.write("\t@printf '%s\\n'\n" % escape_char(title))
+            self.f.write("\t@+printf '%s\\n'\n" % escape_char(title))
 
         # Add all commands
         cmds = check_args_cmd(cmds)
@@ -159,7 +163,7 @@ class Workflow():
                 cmd += ' 1> /dev/null'
 
             # print command with + symbol and green color
-            self.f.write("\t-@echo '[32m+%s[0m'\n" % cmd)
+            self.f.write("\t-@echo '${CMDCOL}+%s${DEFCOL}'\n" % cmd)
 
             # command to be run
             self.f.write("\t@%s\n" % cmd)
@@ -216,7 +220,7 @@ class Workflow():
 
         for cmd in cmds:
             # print command with + symbol and green color
-            self.f.write("\t-@echo '[32m+%s[0m'\n" % cmd)
+            self.f.write("\t-@echo '${CMDCOL}+%s${DEFCOL}'\n" % cmd)
 
             # command to be run
             self.f.write("\t@%s\n" % cmd)
@@ -255,7 +259,7 @@ class Workflow():
 
         # Append other options
         if dryrun:
-            cmd += ' -n'
+            cmd += ' -n --no-print-directory'
         if debug:
             cmd += ' -d'
         if ignore_err:

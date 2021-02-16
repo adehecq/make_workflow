@@ -11,6 +11,39 @@ import sys
 from tempfile import NamedTemporaryFile
 import traceback
 from subprocess import check_call
+import subprocess
+from packaging import version
+
+
+def get_make_version():
+    """
+    Get make version number.
+    Output of make -v is expected to be something like:
+
+    GNU Make X.X.X
+    Built for....
+    Copyright...
+    ....
+
+    where X.X.X is the version number.
+    """
+    # Run make -v and save output
+    process = subprocess.Popen(['make', '-v'], stdout=subprocess.PIPE)
+    stdout = process.communicate()[0]
+
+    # Convert default Byte type to string
+    stdout = stdout.decode('utf-8')
+
+    # Get first line containing version number
+    fline = stdout.split('\n')[0]
+
+    # Get last item containing version number
+    vnum = fline.split(' ')[-1]
+
+    # Convert to a version object for comparison
+    make_version = version.parse(vnum)
+
+    return make_version
 
 
 class Workflow():
@@ -70,6 +103,13 @@ class Workflow():
         f.flush()
         self.f = f
 
+        # Check if make version is newer than 4.3
+        make_version = get_make_version()
+        if make_version > version.parse('4.3'):
+            self.new_version = True
+        else:
+            self.new_version = False
+
     def append(self, cmds, inputs, outputs,
                title=None, secondary=False, soft_inputs=[], verbose=True):
         """
@@ -80,16 +120,28 @@ class Workflow():
         If verbose set to False, will print stdout to /dev/null.
         """
 
+        # Make sure outputs are lists
+        outputs = check_args_output(outputs)
+
         # Convert potential lists into string with space separator
-        outputs = check_args_inout(outputs)
         inputs = check_args_inout(inputs)
         soft_inputs = check_args_inout(soft_inputs)
 
         # Write target:deps line
-        if len(soft_inputs) > 0:
-            self.f.write("\n%s : %s | %s\n" % (outputs, inputs, soft_inputs))
+        # For make > 4.3, grouped targets can be set explicitly with &:
+        if self.new_version:
+            if len(soft_inputs) > 0:
+                self.f.write("\n%s &: %s | %s\n" % (' '.join(outputs), inputs, soft_inputs))
+            else:
+                self.f.write("\n%s &: %s\n" % (' '.join(outputs), inputs))
+
+        # For make < 4.3, must have only one output
+        # Additional outputs are added later
         else:
-            self.f.write("\n%s : %s\n" % (outputs, inputs))
+            if len(soft_inputs) > 0:
+                self.f.write("\n%s : %s | %s\n" % (outputs[0], inputs, soft_inputs))
+            else:
+                self.f.write("\n%s : %s\n" % (outputs[0], inputs))
 
         # Add command for title
         if title is not None:
@@ -112,6 +164,19 @@ class Workflow():
             # command to be run
             self.f.write("\t@%s\n" % cmd)
 
+        # For make < 4.3 and multiple outputs, must create rule for each output
+        if not self.new_version:
+            if len(outputs)>1:
+
+                # Command for additional output
+                # If output exists, update with touch
+                # Otherwise and if first output exists, delete and re-run rule
+                cmd_add_output = "if test -f $@; then touch -h $@; else if [ -f $^ ]; then rm -f $^ && ${MAKE} $^; fi; fi"
+
+                for k in range(1,len(outputs)):
+                    self.f.write("\n%s : %s\n" % (outputs[k], outputs[k-1]))
+                    self.f.write("\t@%s\n" % cmd_add_output)
+
         ## Need to update the MAIN function to add new outputs ##
         # Only if outputs are not secondary (intermediate) files
         if not secondary:
@@ -120,7 +185,7 @@ class Workflow():
             self.f.seek(0)
             for line in self.f:
                 if line[:4] == 'MAIN':
-                    line = ' '.join([line.rstrip(), outputs, '\n'])
+                    line = ' '.join([line.rstrip(), *outputs, '\n'])
                     filetext += line
                 else:
                     filetext += line
@@ -133,7 +198,7 @@ class Workflow():
 
         # if files are secondary, need to specify
         else:
-            self.f.write("\n.SECONDARY : %s\n" % (outputs))
+            self.f.write("\n.SECONDARY : %s\n" % (' '.join(outputs)))
             self.f.flush()
 
     def clean(self, cmds):
@@ -224,6 +289,31 @@ def check_args_inout(args):
         args = ' '.join(args)
     else:
         print("ERROR: argument must be iterable (list, tuple, array). \
+        Currently set to:")
+        print(args)
+        traceback.print_stack()
+        sys.exit()
+
+    return args
+
+
+def check_args_output(args):
+    """
+    Accepted arguments for outputs are string (in case a single output), or some kind of list (list, tuple, numpy array). Convert all into a list.
+    Remove redundant slashes in filenames as it will be recognized as a different file by make.
+    """
+    # To comply with both Python3 and 2, string must be detected first
+    # in Python3, string have __iter__ attribute too
+    if isinstance(args, str):
+        if len(args) > 0:   # exclude empty string
+            args = [os.path.normpath(args)]
+        else:
+            args = []
+    # should work for list, tuples, numpy arrays
+    elif hasattr(args, '__iter__'):
+        args = [os.path.normpath(arg) for arg in args]
+    else:
+        print("ERROR: argument must be str or iterable (list, tuple, array). \
         Currently set to:")
         print(args)
         traceback.print_stack()
